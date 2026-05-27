@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lana & Lino</title>
+  <link rel="stylesheet" href="" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- header -->
+<header id="main-header">
+  <div class="header-left">
+    <button class="icon-btn" id="theme-toggle" title="Alternar modo">☽</button>
+    <div class="dropdown" id="cat-dropdown">
+      <button class="nav-link" id="cat-btn">Productos ▾</button>
+      <div class="dropdown-menu" id="cat-menu">
+        <a href="#" class="dropdown-item" data-cat="all">Todos</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-center">
+    <h1 class="brand" onclick="showPage('home')">Lana <span>&</span> Lino</h1>
+  </div>
+
+  <div class="header-right">
+    <div class="search-wrap">
+      <input type="text" id="search-input" placeholder="Buscar producto..." />
+      <button id="search-btn" class="icon-btn">⌕</button>
+    </div>
+    <button class="icon-btn" id="fav-btn" title="Favoritos">♡</button>
+    <button class="icon-btn" id="cart-btn" title="Carrito">
+      ◻ <span id="cart-count" class="badge hidden">0</span>
+    </button>
+    <button class="icon-btn" id="user-btn" title="Mi cuenta">👤</button>
+    <button class="nav-link" id="login-btn">Iniciar sesión</button>
+  </div>
+</header>
+
+<!-- paginas -->
+<main id="app">
+
+  <!-- pagina home/ pagina catalogo -->
+  <section id="page-home" class="page active">
+    <div class="filters-bar">
+      <div class="filter-group">
+        <label>Género</label>
+        <select id="filter-genero">
+          <option value="">Todos</option>
+          <option value="masculino">Masculino</option>
+          <option value="femenino">Femenino</option>
+          <option value="unisex">Unisex</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Categoría</label>
+        <select id="filter-cat">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Color</label>
+        <input type="text" id="filter-color" placeholder="ej: negro" />
+      </div>
+      <button class="btn-secondary" id="apply-filters">Filtrar</button>
+      <button class="btn-ghost" id="clear-filters">Limpiar</button>
+    </div>
+    <div id="products-grid" class="products-grid"></div>
+  </section>
+
+  <!-- detalle de los productos -->
+  <section id="page-product" class="page">
+    <div id="product-detail"></div>
+  </section>
+
+  <!-- login -->
+  <section id="page-login" class="page">
+    <div class="form-card">
+      <h2>Iniciar Sesión</h2>
+      <div id="login-error" class="error-msg hidden"></div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="tu@email.com" />
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="login-password" placeholder="••••••" />
+      </div>
+      <button class="btn-primary" id="do-login">Ingresar</button>
+      <p class="form-footer">¿No tenés cuenta? <a href="#" onclick="showPage('register')">Registrarse</a></p>
+    </div>
+  </section>
+
+  <!-- registrarse -->
+  <section id="page-register" class="page">
+    <div class="form-card">
+      <h2>Crear Cuenta</h2>
+      <div id="reg-error" class="error-msg hidden"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre</label>
+          <input type="text" id="reg-nombre" placeholder="María" />
+        </div>
+        <div class="form-group">
+          <label>Apellido</label>
+          <input type="text" id="reg-apellido" placeholder="García" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Dirección</label>
+        <input type="text" id="reg-direccion" placeholder="Av. Siempreviva 742" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="text" id="reg-telefono" placeholder="+54 9 11 ..." />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="reg-email" placeholder="tu@email.com" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="reg-password" placeholder="••••••" />
+      </div>
+      <button class="btn-primary" id="do-register">Registrarme</button>
+      <p class="form-footer">¿Ya tenés cuenta? <a href="#" onclick="showPage('login')">Iniciar sesión</a></p>
+    </div>
+  </section>
+
+  <!-- categoria favoritos -->
+  <section id="page-favorites" class="page">
+    <div class="page-header">
+      <h2>Mis Favoritos</h2>
+    </div>
+    <div id="favorites-grid" class="products-grid"></div>
+  </section>
+
+  <!-- carrito de compras -->
+  <section id="page-cart" class="page">
+    <div class="page-header">
+      <h2>Mi Carrito</h2>
+    </div>
+    <div id="cart-list" class="cart-list"></div>
+    <div id="cart-summary" class="cart-summary hidden">
+      <div class="cart-total">
+        <span>Total:</span>
+        <strong id="cart-total-price">$0</strong>
+      </div>
+      <button class="btn-primary" id="go-checkout">Pagar</button>
+    </div>
+  </section>
+
+  <!-- resumen pedidos -->
+  <section id="page-checkout" class="page">
+    <div class="checkout-wrap">
+      <div class="checkout-products">
+        <h2>Resumen del Pedido</h2>
+        <div id="checkout-list"></div>
+        <div class="checkout-total">
+          <span>Total</span>
+          <strong id="checkout-total"></strong>
+        </div>
+      </div>
+      <div class="checkout-payment form-card">
+        <h2>Datos de Pago</h2>
+        <div class="form-group">
+          <label>Tipo de pago</label>
+          <select id="pay-type">
+            <option value="">Seleccionar...</option>
+            <option value="transferencia">Transferencia</option>
+            <option value="debito">Débito</option>
+            <option value="credito">Crédito</option>
+          </select>
+        </div>
+        <div id="card-fields" class="hidden">
+          <div class="form-group">
+            <label>Número de tarjeta</label>
+            <input type="text" id="card-number" placeholder="0000 0000 0000 0000" maxlength="19"/>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Vencimiento</label>
+              <input type="text" id="card-exp" placeholder="MM/AA" maxlength="5"/>
+            </div>
+            <div class="form-group">
+              <label>Titular</label>
+              <input type="text" id="card-name" placeholder="NOMBRE APELLIDO"/>
+            </div>
+          </div>
+        </div>
+        <button class="btn-primary" id="do-pay" disabled>Pagar</button>
+        <div id="pay-success" class="success-msg hidden">✓ Pago aprobado con éxito</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- perfil del usuario -->
+  <section id="page-profile" class="page">
+    <div class="form-card">
+      <h2>Mis Datos</h2>
+      <div id="profile-error" class="error-msg hidden"></div>
+      <div id="profile-success" class="success-msg hidden"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre</label>
+          <input type="text" id="p-nombre"/>
+        </div>
+        <div class="form-group">
+          <label>Apellido</label>
+          <input type="text" id="p-apellido"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Dirección</label>
+        <input type="text" id="p-direccion"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="text" id="p-telefono"/>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="p-email"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="p-password" placeholder="Nueva contraseña (dejar vacío para mantener)"/>
+      </div>
+      <button class="btn-primary" id="do-update-profile">Guardar cambios</button>
+    </div>
+  </section>
+
+  <!-- perfil del admin -->
+  <section id="page-admin" class="page">
+    <div class="admin-wrap">
+      <h2>Gestión de Productos</h2>
+      <div class="admin-tabs">
+        <button class="tab-btn active" data-tab="admin-add">Cargar Producto</button>
+        <button class="tab-btn" data-tab="admin-search">Buscar / Modificar</button>
+      </div>
+
+      <!-- agregar nuevos productos -->
+      <div id="admin-add" class="tab-content active">
+        <div class="form-card">
+          <h3>Nuevo Producto</h3>
+          <div id="admin-error" class="error-msg hidden"></div>
+          <div id="admin-success" class="success-msg hidden"></div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nombre</label>
+              <input type="text" id="a-nombre"/>
+            </div>
+            <div class="form-group">
+              <label>Precio</label>
+              <input type="number" id="a-precio" min="0"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Descripción</label>
+            <textarea id="a-desc" rows="2"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Género</label>
+              <select id="a-genero">
+                <option value="masculino">Masculino</option>
+                <option value="femenino">Femenino</option>
+                <option value="unisex">Unisex</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Categoría</label>
+              <select id="a-cat"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>URL Imagen</label>
+            <input type="text" id="a-imagen" placeholder="https://..."/>
+          </div>
+          <button class="btn-primary" id="do-add-product">Cargar Producto</button>
+
+          <!-- adicion de productos al inventario -->
+          <div id="inv-section" class="hidden" style="margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem;">
+            <h3>Agregar Inventario al Producto Creado</h3>
+            <div id="inv-msg" class="success-msg" style="margin-bottom:1rem;"></div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Talle</label>
+                <input type="text" id="inv-talle" placeholder="S, M, L, XL..."/>
+              </div>
+              <div class="form-group">
+                <label>Color</label>
+                <input type="text" id="inv-color" placeholder="Negro"/>
+              </div>
+              <div class="form-group">
+                <label>Stock</label>
+                <input type="number" id="inv-stock" min="0"/>
+              </div>
+            </div>
+            <button class="btn-secondary" id="do-add-inv">Agregar Inventario</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- buscador de productos -->
+      <div id="admin-search" class="tab-content">
+        <div class="form-card">
+          <h3>Buscar Producto</h3>
+          <div class="search-wrap" style="max-width:400px;margin-bottom:1.5rem;">
+            <input type="text" id="admin-search-input" placeholder="Nombre del producto..."/>
+            <button class="icon-btn" id="admin-search-btn">⌕</button>
+          </div>
+          <div id="admin-products-list"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- footer de la pagina -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-col">
+      <h4>Lana <span>&</span> Lino</h4>
+      <p>Indumentaria con estilo y calidad.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Contacto</h4>
+      <p>Mail: contacto@lanaylino.com.ar</p>
+      <p>Teléfono: +54 9 11 5555-0000</p>
+      <p>Tel.: (011) 4444-5555</p>
+      <p>WhatsApp: +54 9 11 5555-0000</p>
+    </div>
+    <div class="footer-col">
+      <h4>Redes</h4>
+      <p>Instagram: @lanaylino</p>
+      <p>Facebook: /lanaylinooficial</p>
+      <p>TikTok: @lanaylino</p>
+    </div>
+    <div class="footer-col">
+      <h4>Desarrollado por</h4>
+      <p>Acevedo & Oliver</p>
+      <p>Programación II — 2025</p>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2025 Lana & Lino. Todos los derechos reservados.</div>
+</footer>
+
+<script src=""></script>
+</body>
+</html>
