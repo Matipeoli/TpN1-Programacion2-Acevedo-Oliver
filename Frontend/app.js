@@ -361,3 +361,162 @@ function renderProductDetail(items) {
     addToCart();
   });
 }
+
+//categorias
+function buildCategoryDropdown() {
+  const cats = [...new Set(state.products.map(p => ({ id: p.idCategoria, name: p.categoria })))
+    .reduce((m, c) => { m.set(c.id, c); return m; }, new Map()).values()];
+  state.categories = cats;
+
+  const menu = $('cat-menu');
+  menu.innerHTML = `<a href="#" class="dropdown-item" data-cat="all">Todos los productos</a>`;
+  cats.forEach(c => {
+    const a = document.createElement('a');
+    a.href = '#';
+    a.className = 'dropdown-item';
+    a.dataset.cat = c.id;
+    a.textContent = c.name;
+    a.onclick = (e) => {
+      e.preventDefault();
+      menu.classList.remove('open');
+      filterByCategory(c.id);
+    };
+    menu.appendChild(a);
+  });
+}
+
+function buildFilterCatSelect() {
+  const sel = $('filter-cat');
+  sel.innerHTML = '<option value="">Todas</option>';
+  state.categories.forEach(c => {
+    sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+  });
+}
+
+function filterByCategory(catId) {
+  showPage('home');
+  if (catId === 'all') {
+    renderProducts(state.products);
+    return;
+  }
+  const filtered = state.products.filter(p => p.idCategoria == catId);
+  renderProducts(filtered);
+}
+
+//filtros
+function applyFilters() {
+  const genero = $('filter-genero').value.toLowerCase();
+  const cat = $('filter-cat').value;
+  const color = $('filter-color').value.toLowerCase().trim();
+
+  let result = [...state.products];
+  if (genero) result = result.filter(p => p.genero?.toLowerCase() === genero);
+  if (cat) result = result.filter(p => p.idCategoria == cat);
+  // Color requires product detail — filter client side from what we have
+  // We'll do a best-effort filter; actual color is in inventory
+  if (color) result = result.filter(p => p.producto?.toLowerCase().includes(color));
+
+  renderProducts(result);
+  showPage('home');
+}
+
+function clearFilters() {
+  $('filter-genero').value = '';
+  $('filter-cat').value = '';
+  $('filter-color').value = '';
+  renderProducts(state.products);
+}
+
+//busqueda sencilla 
+function doSearch() {
+  const q = $('search-input').value.trim().toLowerCase();
+  if (!q) { renderProducts(state.products); showPage('home'); return; }
+  const filtered = state.products.filter(p =>
+    p.producto?.toLowerCase().includes(q) || p.descripcion?.toLowerCase().includes(q)
+  );
+  renderProducts(filtered);
+  showPage('home');
+}
+//seccion favoritos
+async function loadFavorites() {
+  if (!isLoggedIn()) return;
+  try {
+    const res = await fetch(`${API}/obtenerFavoritos/${state.user.id_usuario}`, {
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      state.favorites = data.payload.map(f => f.idProducto);
+    }
+  } catch (e) { console.error('Error cargando favoritos', e); }
+}
+
+async function toggleFavorite(productId, btn) {
+  if (!isLoggedIn()) return showPage('login');
+  const isFav = state.favorites.includes(productId);
+  try {
+    if (isFav) {
+      await fetch(`${API}/eliminarFavorito`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+        body: JSON.stringify({ id_usuario: state.user.id_usuario, id_producto: productId })
+      });
+      state.favorites = state.favorites.filter(id => id !== productId);
+      btn.textContent = '♡';
+      btn.classList.remove('active');
+    } else {
+      await fetch(`${API}/agregarFavorito`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ id_usuario: state.user.id_usuario, id_producto: productId })
+      });
+      state.favorites.push(productId);
+      btn.textContent = '♥';
+      btn.classList.add('active');
+    }
+  } catch (e) { console.error('Error toggling favorite', e); }
+}
+
+function renderFavoritesPage() {
+  if (!isLoggedIn()) { showPage('login'); return; }
+  const grid = $('favorites-grid');
+  const favProducts = state.products.filter(p => state.favorites.includes(p.idProducto));
+  if (!favProducts.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">♡</div><p>No tenés productos en favoritos.</p>
+    </div>`;
+  } else {
+    grid.innerHTML = favProducts.map(p => {
+      const img = p.ulrImagen || 'https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen';
+      return `<div class="fav-item" data-id="${p.idProducto}">
+        <button class="fav-remove" data-id="${p.idProducto}" title="Eliminar de favoritos">✕</button>
+        <img src="${img}" alt="${p.producto}" onerror="this.src='https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen'"/>
+        <div class="fav-item-body">
+          <h4>${p.producto}</h4>
+          <div class="fav-price">${fmt(p.precio)}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.fav-item').forEach(item => {
+      item.addEventListener('click', e => {
+        if (e.target.classList.contains('fav-remove')) return;
+        openProduct(item.dataset.id);
+      });
+    });
+    grid.querySelectorAll('.fav-remove').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.id);
+        await fetch(`${API}/eliminarFavorito`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+          body: JSON.stringify({ id_usuario: state.user.id_usuario, id_producto: id })
+        });
+        state.favorites = state.favorites.filter(f => f !== id);
+        renderFavoritesPage();
+      });
+    });
+  }
+  showPage('favorites');
+}
