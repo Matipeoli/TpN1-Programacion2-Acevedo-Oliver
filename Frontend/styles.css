@@ -1,0 +1,97 @@
+:root {
+  --cream:      #f7f4ef;
+  --cream-dark: #ede9e0;
+  --sand:       #d6cfc0;
+  --brown:      #8b5e3c;
+  --brown-dark: #5c3d22;
+  --text:       #1a1612;
+  --text-muted: #6b6258;
+  --text-light: #a8998a;
+  --white:      #ffffff;
+  --border:     #ddd6ca;
+  --border-light: #ede9e0;
+  --success:    #3a7d44;
+  --error:      #b53a2f;
+  --accent:     #8b5e3c;
+
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-sans:  'DM Sans', system-ui, sans-serif;
+
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  14px;
+
+  --shadow-sm:  0 1px 3px rgba(90,60,30,.08);
+  --shadow-md:  0 4px 16px rgba(90,60,30,.12);
+  --shadow-lg:  0 12px 40px rgba(90,60,30,.18);
+
+  --header-h:   64px;
+  --transition: 220ms ease;
+}
+
+[data-theme="dark"] {
+  --cream:      #1c1814;
+  --cream-dark: #252018;
+  --sand:       #3a3228;
+  --brown:      #c89b6e;
+  --brown-dark: #e0b882;
+  --text:       #f0ebe3;
+  --text-muted: #b0a090;
+  --text-light: #7a6e62;
+  --white:      #2a2420;
+  --border:     #3e3428;
+  --border-light:#2e2820;
+  --success:    #5fad6a;
+  --error:      #e06050;
+  --accent:     #c89b6e;
+  --shadow-sm:  0 1px 3px rgba(0,0,0,.3);
+  --shadow-md:  0 4px 16px rgba(0,0,0,.4);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,.5);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--text);
+  background: var(--cream);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+a { color: var(--brown); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+input, select, textarea { font-family: inherit; font-size: 14px; outline: none; }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--text);
+}
+h2 { font-size: 2rem; }
+h3 { font-size: 1.4rem; }
+h4 { font-size: 1.1rem; }
+
+.hidden { display: none !important; }
+
+.error-msg {
+  background: rgba(181, 58, 47, .08);
+  border: 1px solid rgba(181, 58, 47, .3);
+  color: var(--error);
+  padding: .6rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  margin-bottom: 1rem;
+}
+.success-msg {
+  background: rgba(58, 125, 68, .08);
+  border: 1px solid rgba(58, 125, 68, .3);
+  color: var(--success);
+  padding: .6rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  margin-bottom: 1rem;
+}
