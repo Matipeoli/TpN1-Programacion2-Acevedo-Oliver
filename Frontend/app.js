@@ -847,4 +847,117 @@ async function init() {
   initTheme();
   restoreSession();
   updateHeader();
+
+    //cargar productos y renderizar home
+    $('products-grid').innerHTML = `<div class="spinner-wrap" style="grid-column:1/-1"><div class="spinner"></div></div>`;
+  await loadProducts();
+  renderProducts(state.products);
+
+  if (isLoggedIn()) {
+    await loadFavorites();
+    await loadCart();
+  }
+  //
+  //tema
+  $('theme-toggle').addEventListener('click', toggleTheme);
+
+  //navegacion entre categorias
+  $('cat-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    $('cat-menu').classList.toggle('open');
+  });
+  $('cat-menu').querySelector('[data-cat="all"]').addEventListener('click', e => {
+    e.preventDefault();
+    $('cat-menu').classList.remove('open');
+    renderProducts(state.products);
+    showPage('home');
+  });
+  document.addEventListener('click', () => $('cat-menu').classList.remove('open'));
+
+  //busqueda
+  $('search-btn').addEventListener('click', doSearch);
+  $('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+  //favoritos
+  $('fav-btn').addEventListener('click', renderFavoritesPage);
+
+  //carrito
+  $('cart-btn').addEventListener('click', async () => {
+    await loadCart();
+    renderCartPage();
+  });
+  $('go-checkout').addEventListener('click', renderCheckout);
+
+  //usuario
+  $('user-btn').addEventListener('click', loadProfile);
+
+  //login-registro
+  $('login-btn').addEventListener('click', () => {
+    if (!isLoggedIn()) showPage('login');
+    else logout();
+  });
+  $('do-login').addEventListener('click', doLogin);
+  $('do-register').addEventListener('click', doRegister);
+
+  //filtros
+  $('apply-filters').addEventListener('click', applyFilters);
+  $('clear-filters').addEventListener('click', clearFilters);
+
+  //perfiles
+  $('do-update-profile').addEventListener('click', updateProfile);
+
+  //checkout
+  $('pay-type').addEventListener('change', () => {
+    const type = $('pay-type').value;
+    if (type === 'debito' || type === 'credito') {
+      $('card-fields').classList.remove('hidden');
+    } else {
+      $('card-fields').classList.add('hidden');
+    }
+    checkPayReady();
+  });
+  ['card-number', 'card-exp', 'card-name'].forEach(id => {
+    $(id).addEventListener('input', checkPayReady);
+  });
+  //formateo de campos de tarjeta
+  $('card-number').addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 16);
+    e.target.value = v.replace(/(.{4})/g, '$1 ').trim();
+    checkPayReady();
+  });
+  $('card-exp').addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+    if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+    e.target.value = v;
+    checkPayReady();
+  });
+
+  $('do-pay').addEventListener('click', () => {
+    $('do-pay').disabled = true;
+    $('pay-success').classList.remove('hidden');
+    $('pay-success').textContent = '✓ ¡Pago aprobado con éxito! Gracias por tu compra.';
+  });
+//admin
+$('do-add-product').addEventListener('click', addProduct);
+  $('do-add-inv').addEventListener('click', addInventario);
+  $('admin-search-btn').addEventListener('click', () => {
+    const q = $('admin-search-input').value.trim().toLowerCase();
+    const filtered = q ? state.products.filter(p => p.producto?.toLowerCase().includes(q)) : state.products;
+    renderAdminSearch(filtered);
+  });
+  $('admin-search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('admin-search-btn').click();
+  });
+
+  //tab de admin
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      $(btn.dataset.tab).classList.add('active');
+    });
+  });
 }
+
+document.addEventListener('DOMContentLoaded', init);
