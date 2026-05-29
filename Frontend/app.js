@@ -639,4 +639,212 @@ function checkPayReady() {
   const name = $('card-name').value.trim();
   $('do-pay').disabled = !(num.length >= 19 && exp.length === 5 && name.length > 2);
 }
-//perfil
+
+//perfil de usuario
+async function loadProfile() {
+  if (!isLoggedIn()) { showPage('login'); return; }
+  try {
+    const res = await fetch(`${API}/obtenerDatosUsuario/${state.user.id_usuario}`, {
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      const u = data.payload[0];
+      $('p-nombre').value = u.nombre || '';
+      $('p-apellido').value = u.apellido || '';
+      $('p-direccion').value = u.direccion || '';
+      $('p-telefono').value = u.telefono || '';
+      $('p-email').value = u.email || '';
+      $('p-password').value = '';
+    }
+  } catch (e) {}
+  showPage('profile');
+}
+
+async function updateProfile() {
+  hideError('profile-error');
+  const body = {
+    nombre: $('p-nombre').value.trim(),
+    apellido: $('p-apellido').value.trim(),
+    direccion: $('p-direccion').value.trim(),
+    telefono: $('p-telefono').value.trim(),
+    email: $('p-email').value.trim(),
+    password: $('p-password').value || state.user.password || '',
+    rol: state.user.rol
+  };
+  try {
+    const res = await fetch(`${API}/modificarUsuario/${state.user.id_usuario}`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.codigo === 200) showSuccess('profile-success', 'Datos actualizados correctamente.');
+    else showError('profile-error', data.mensaje || 'Error al actualizar.');
+  } catch (e) { showError('profile-error', 'Error de conexión.'); }
+}
+
+//admin
+async function loadAdminCats() {
+  try {
+    const res = await fetch(`${API}/obtenerCategorias`, { headers: authHeaders() });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      const sel = $('a-cat');
+      sel.innerHTML = data.payload.map(c => `<option value="${c.id_categoria}">${c.nombre}</option>`).join('');
+    }
+  } catch (e) {}
+}
+
+let newProductId = null;
+
+async function addProduct() {
+  hideError('admin-error');
+  $('admin-success').classList.add('hidden');
+  const body = {
+    nombre: $('a-nombre').value.trim(),
+    descripcion: $('a-desc').value.trim(),
+    precio: parseFloat($('a-precio').value),
+    genero: $('a-genero').value,
+    id_categoria: parseInt($('a-cat').value),
+    imagen: $('a-imagen').value.trim()
+  };
+  if (!body.nombre || !body.precio || !body.id_categoria) return showError('admin-error', 'Completá todos los campos.');
+  try {
+    const res = await fetch(`${API}/cargarProducto`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      newProductId = data.payload[0].idProducto;
+      showSuccess('admin-success', `Producto cargado con ID ${newProductId}. Ahora podés agregar inventario.`);
+      $('inv-section').classList.remove('hidden');
+      $('inv-msg').textContent = `Agregando inventario al producto ID ${newProductId}`;
+      await loadProducts();
+    } else {
+      showError('admin-error', data.mensaje || 'Error al cargar producto.');
+    }
+  } catch (e) { showError('admin-error', 'Error de conexión.'); }
+}
+
+async function addInventario() {
+  if (!newProductId) return;
+  const body = {
+    talle: $('inv-talle').value.trim(),
+    color: $('inv-color').value.trim(),
+    stock: parseInt($('inv-stock').value),
+    id_producto: newProductId
+  };
+  if (!body.talle || !body.color || isNaN(body.stock)) return alert('Completá los campos de inventario.');
+  try {
+    const res = await fetch(`${API}/crearInventario`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      $('inv-talle').value = '';
+      $('inv-color').value = '';
+      $('inv-stock').value = '';
+      alert('Inventario agregado. Podés agregar más talles/colores.');
+    }
+  } catch (e) { alert('Error al agregar inventario.'); }
+}
+
+function renderAdminSearch(products) {
+  const list = $('admin-products-list');
+  if (!products.length) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">No se encontraron productos.</p>';
+    return;
+  }
+  list.innerHTML = products.map(p => {
+    const img = p.ulrImagen || 'https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen';
+    return `<div class="admin-product-row" data-id="${p.idProducto}">
+      <img src="${img}" alt="${p.producto}" onerror="this.src='https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen'"/>
+      <div class="admin-row-info">
+        <h4>${p.producto}</h4>
+        <p>${p.categoria} · ${p.genero} · ${fmt(p.precio)}</p>
+      </div>
+      <button class="btn-secondary edit-product-btn" data-id="${p.idProducto}">Modificar</button>
+    </div>
+    <div id="edit-form-${p.idProducto}" class="hidden"></div>`;
+  }).join('');
+
+  list.querySelectorAll('.edit-product-btn').forEach(btn => {
+    btn.addEventListener('click', () => openEditForm(parseInt(btn.dataset.id)));
+  });
+}
+
+async function openEditForm(id) {
+  const formDiv = $(`edit-form-${id}`);
+  if (!formDiv.classList.contains('hidden')) { formDiv.classList.add('hidden'); return; }
+  try {
+    const res = await fetch(`${API}/obtenerDatosProducto/${id}`);
+    const data = await res.json();
+    if (data.codigo !== 200) return;
+    const p = data.payload[0];
+    formDiv.classList.remove('hidden');
+    formDiv.innerHTML = `<div class="edit-form">
+      <div class="form-row">
+        <div class="form-group"><label>Nombre</label><input id="ep-nombre-${id}" value="${p.producto}"/></div>
+        <div class="form-group"><label>Precio</label><input type="number" id="ep-precio-${id}" value="${p.precio}"/></div>
+      </div>
+      <div class="form-group"><label>Descripción</label><textarea id="ep-desc-${id}" rows="2">${p.descripcion}</textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Género</label>
+          <select id="ep-genero-${id}">
+            <option value="masculino" ${p.genero==='masculino'?'selected':''}>Masculino</option>
+            <option value="femenino" ${p.genero==='femenino'?'selected':''}>Femenino</option>
+            <option value="unisex" ${p.genero==='unisex'?'selected':''}>Unisex</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Imagen URL</label><input id="ep-img-${id}" value="${p.ulrImagen}"/></div>
+      </div>
+      
+      <h4 style="margin:1rem 0 0.5rem;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted)">Inventario</h4>
+      <div id="inv-list-${id}">
+        ${data.payload.map(i => `<div class="form-row" style="align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+          <span style="font-size:0.85rem;color:var(--text-muted)">${i.talle} / ${i.color}</span>
+          <div class="form-group" style="margin:0;flex:0 0 100px">
+            <input type="number" id="inv-stock-edit-${i.idInventario}" value="${i.stock}" min="0" placeholder="Stock"/>
+          </div>
+          <button class="btn-secondary save-stock-btn" data-inv="${i.idInventario}" style="white-space:nowrap;font-size:0.75rem">Guardar stock</button>
+        </div>`).join('')}
+      </div>
+
+      <button class="btn-primary save-product-btn" data-id="${id}" style="margin-top:1rem">Guardar cambios</button>
+    </div>`;
+
+    //guardar stock por item de inventario
+    formDiv.querySelectorAll('.save-stock-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const invId = parseInt(btn.dataset.inv);
+        const stock = parseInt($(`inv-stock-edit-${invId}`).value);
+        try {
+          const r = await fetch(`${API}/modificarStock`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({ id_inventario: invId, stock })
+          });
+          const d = await r.json();
+          alert(d.mensaje || 'Stock actualizado.');
+        } catch (e) { alert('Error.'); }
+      });
+    });
+    //guardar cambios de producto
+    formDiv.querySelector('.save-product-btn').addEventListener('click', async () => {
+      alert('Para modificar datos del producto (nombre, precio, etc.) usá la funcionalidad de stock disponible o recargá un nuevo producto. El backend no expone endpoint de edición de producto base.');
+    });
+
+  } catch (e) { console.error(e); }
+}
+
+//inicio
+async function init() {
+  initTheme();
+  restoreSession();
+  updateHeader();
+}
