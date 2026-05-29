@@ -520,3 +520,123 @@ function renderFavoritesPage() {
   }
   showPage('favorites');
 }
+//carrito de compras
+async function loadCart() {
+  if (!isLoggedIn()) return;
+  try {
+    const res = await fetch(`${API}/obtenerProductosCarrito/${state.user.id_usuario}`, {
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      state.cart = data.payload;
+      updateCartBadge();
+    }
+  } catch (e) { console.error('Error cargando carrito', e); }
+}
+
+function updateCartBadge() {
+  const badge = $('cart-count');
+  if (state.cart.length > 0) {
+    badge.textContent = state.cart.length;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+async function addToCart() {
+  if (!state.selectedInventario) return;
+  try {
+    const res = await fetch(`${API}/agregarACarrito`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ id_inventario: state.selectedInventario, id_usuario: state.user.id_usuario })
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      await loadCart();
+      $('add-to-cart-btn').textContent = '✓ Agregado al carrito';
+      setTimeout(() => { $('add-to-cart-btn').textContent = 'Agregar al carrito'; }, 2000);
+    }
+  } catch (e) { console.error('Error agregando al carrito', e); }
+}
+
+function renderCartPage() {
+  if (!isLoggedIn()) { showPage('login'); return; }
+  const list = $('cart-list');
+  const summary = $('cart-summary');
+
+  if (!state.cart.length) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">◻</div><p>Tu carrito está vacío.</p>
+    </div>`;
+    summary.classList.add('hidden');
+  } else {
+    list.innerHTML = state.cart.map(item => {
+      const img = item.urlImagen || 'https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen';
+      return `<div class="cart-item">
+        <img src="${img}" alt="${item.producto}" onerror="this.src='https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen'"/>
+        <div class="cart-item-info">
+          <h4>${item.producto}</h4>
+          <div class="item-meta">Talle: ${item.talle} · Color: ${item.color}</div>
+          <div class="item-price">${fmt(item.precio)}</div>
+        </div>
+        <button class="btn-danger remove-cart-item" data-inv="${item.idInventario}">Eliminar</button>
+      </div>`;
+    }).join('');
+
+    const total = state.cart.reduce((s, i) => s + parseFloat(i.precio), 0);
+    $('cart-total-price').textContent = fmt(total);
+    summary.classList.remove('hidden');
+
+    list.querySelectorAll('.remove-cart-item').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await fetch(`${API}/eliminarProductoCarrito`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+          body: JSON.stringify({ id_usuario: state.user.id_usuario, id_inventario: parseInt(btn.dataset.inv) })
+        });
+        await loadCart();
+        renderCartPage();
+      });
+    });
+  }
+  showPage('cart');
+}
+
+//checkout y proceso de pago (simulado)
+function renderCheckout() {
+  const items = state.cart;
+  const total = items.reduce((s, i) => s + parseFloat(i.precio), 0);
+
+  $('checkout-list').innerHTML = items.map(item => {
+    const img = item.urlImagen || 'https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen';
+    return `<div class="checkout-item">
+      <img src="${img}" alt="${item.producto}" onerror="this.src='https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen'"/>
+      <div class="checkout-item-info">
+        <h5>${item.producto}</h5>
+        <div class="item-meta" style="font-size:0.75rem;color:var(--text-muted)">Talle: ${item.talle} · ${item.color}</div>
+        <div class="item-price">${fmt(item.precio)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  $('checkout-total').textContent = fmt(total);
+  $('do-pay').disabled = true;
+  $('pay-success').classList.add('hidden');
+  $('card-fields').classList.add('hidden');
+  $('pay-type').value = '';
+  showPage('checkout');
+}
+
+function checkPayReady() {
+  const type = $('pay-type').value;
+  if (!type) { $('do-pay').disabled = true; return; }
+  if (type === 'transferencia') { $('do-pay').disabled = false; return; }
+  const num = $('card-number').value.trim();
+  const exp = $('card-exp').value.trim();
+  const name = $('card-name').value.trim();
+  $('do-pay').disabled = !(num.length >= 19 && exp.length === 5 && name.length > 2);
+}
+//perfil
