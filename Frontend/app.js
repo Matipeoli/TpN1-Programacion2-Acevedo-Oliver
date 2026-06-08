@@ -361,3 +361,603 @@ function renderProductDetail(items) {
     addToCart();
   });
 }
+
+//categorias
+function buildCategoryDropdown() {
+  const cats = [...new Set(state.products.map(p => ({ id: p.idCategoria, name: p.categoria })))
+    .reduce((m, c) => { m.set(c.id, c); return m; }, new Map()).values()];
+  state.categories = cats;
+
+  const menu = $('cat-menu');
+  menu.innerHTML = `<a href="#" class="dropdown-item" data-cat="all">Todos los productos</a>`;
+  cats.forEach(c => {
+    const a = document.createElement('a');
+    a.href = '#';
+    a.className = 'dropdown-item';
+    a.dataset.cat = c.id;
+    a.textContent = c.name;
+    a.onclick = (e) => {
+      e.preventDefault();
+      menu.classList.remove('open');
+      filterByCategory(c.id);
+    };
+    menu.appendChild(a);
+  });
+}
+
+function buildFilterCatSelect() {
+  const sel = $('filter-cat');
+  sel.innerHTML = '<option value="">Todas</option>';
+  state.categories.forEach(c => {
+    sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+  });
+}
+
+function filterByCategory(catId) {
+  showPage('home');
+  if (catId === 'all') {
+    renderProducts(state.products);
+    return;
+  }
+  const filtered = state.products.filter(p => p.idCategoria == catId);
+  renderProducts(filtered);
+}
+
+//filtros
+function applyFilters() {
+  const genero = $('filter-genero').value.toLowerCase();
+  const cat = $('filter-cat').value;
+  const color = $('filter-color').value.toLowerCase().trim();
+
+  let result = [...state.products];
+  if (genero) result = result.filter(p => p.genero?.toLowerCase() === genero);
+  if (cat) result = result.filter(p => p.idCategoria == cat);
+  // Color requires product detail — filter client side from what we have
+  // We'll do a best-effort filter; actual color is in inventory
+  if (color) result = result.filter(p => p.producto?.toLowerCase().includes(color));
+
+  renderProducts(result);
+  showPage('home');
+}
+
+function clearFilters() {
+  $('filter-genero').value = '';
+  $('filter-cat').value = '';
+  $('filter-color').value = '';
+  renderProducts(state.products);
+}
+
+//busqueda sencilla 
+function doSearch() {
+  const q = $('search-input').value.trim().toLowerCase();
+  if (!q) { renderProducts(state.products); showPage('home'); return; }
+  const filtered = state.products.filter(p =>
+    p.producto?.toLowerCase().includes(q) || p.descripcion?.toLowerCase().includes(q)
+  );
+  renderProducts(filtered);
+  showPage('home');
+}
+//seccion favoritos
+async function loadFavorites() {
+  if (!isLoggedIn()) return;
+  try {
+    const res = await fetch(`${API}/obtenerFavoritos/${state.user.id_usuario}`, {
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      state.favorites = data.payload.map(f => f.idProducto);
+    }
+  } catch (e) { console.error('Error cargando favoritos', e); }
+}
+
+async function toggleFavorite(productId, btn) {
+  if (!isLoggedIn()) return showPage('login');
+  const isFav = state.favorites.includes(productId);
+  try {
+    if (isFav) {
+      await fetch(`${API}/eliminarFavorito`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+        body: JSON.stringify({ id_usuario: state.user.id_usuario, id_producto: productId })
+      });
+      state.favorites = state.favorites.filter(id => id !== productId);
+      btn.textContent = '♡';
+      btn.classList.remove('active');
+    } else {
+      await fetch(`${API}/agregarFavorito`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ id_usuario: state.user.id_usuario, id_producto: productId })
+      });
+      state.favorites.push(productId);
+      btn.textContent = '♥';
+      btn.classList.add('active');
+    }
+  } catch (e) { console.error('Error toggling favorite', e); }
+}
+
+function renderFavoritesPage() {
+  if (!isLoggedIn()) { showPage('login'); return; }
+  const grid = $('favorites-grid');
+  const favProducts = state.products.filter(p => state.favorites.includes(p.idProducto));
+  if (!favProducts.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">♡</div><p>No tenés productos en favoritos.</p>
+    </div>`;
+  } else {
+    grid.innerHTML = favProducts.map(p => {
+      const img = p.ulrImagen || 'https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen';
+      return `<div class="fav-item" data-id="${p.idProducto}">
+        <button class="fav-remove" data-id="${p.idProducto}" title="Eliminar de favoritos">✕</button>
+        <img src="${img}" alt="${p.producto}" onerror="this.src='https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen'"/>
+        <div class="fav-item-body">
+          <h4>${p.producto}</h4>
+          <div class="fav-price">${fmt(p.precio)}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.fav-item').forEach(item => {
+      item.addEventListener('click', e => {
+        if (e.target.classList.contains('fav-remove')) return;
+        openProduct(item.dataset.id);
+      });
+    });
+    grid.querySelectorAll('.fav-remove').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.id);
+        await fetch(`${API}/eliminarFavorito`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+          body: JSON.stringify({ id_usuario: state.user.id_usuario, id_producto: id })
+        });
+        state.favorites = state.favorites.filter(f => f !== id);
+        renderFavoritesPage();
+      });
+    });
+  }
+  showPage('favorites');
+}
+//carrito de compras
+async function loadCart() {
+  if (!isLoggedIn()) return;
+  try {
+    const res = await fetch(`${API}/obtenerProductosCarrito/${state.user.id_usuario}`, {
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      state.cart = data.payload;
+      updateCartBadge();
+    }
+  } catch (e) { console.error('Error cargando carrito', e); }
+}
+
+function updateCartBadge() {
+  const badge = $('cart-count');
+  if (state.cart.length > 0) {
+    badge.textContent = state.cart.length;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+async function addToCart() {
+  if (!state.selectedInventario) return;
+  try {
+    const res = await fetch(`${API}/agregarACarrito`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ id_inventario: state.selectedInventario, id_usuario: state.user.id_usuario })
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      await loadCart();
+      $('add-to-cart-btn').textContent = '✓ Agregado al carrito';
+      setTimeout(() => { $('add-to-cart-btn').textContent = 'Agregar al carrito'; }, 2000);
+    }
+  } catch (e) { console.error('Error agregando al carrito', e); }
+}
+
+function renderCartPage() {
+  if (!isLoggedIn()) { showPage('login'); return; }
+  const list = $('cart-list');
+  const summary = $('cart-summary');
+
+  if (!state.cart.length) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">◻</div><p>Tu carrito está vacío.</p>
+    </div>`;
+    summary.classList.add('hidden');
+  } else {
+    list.innerHTML = state.cart.map(item => {
+      const img = item.urlImagen || 'https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen';
+      return `<div class="cart-item">
+        <img src="${img}" alt="${item.producto}" onerror="this.src='https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen'"/>
+        <div class="cart-item-info">
+          <h4>${item.producto}</h4>
+          <div class="item-meta">Talle: ${item.talle} · Color: ${item.color}</div>
+          <div class="item-price">${fmt(item.precio)}</div>
+        </div>
+        <button class="btn-danger remove-cart-item" data-inv="${item.idInventario}">Eliminar</button>
+      </div>`;
+    }).join('');
+
+    const total = state.cart.reduce((s, i) => s + parseFloat(i.precio), 0);
+    $('cart-total-price').textContent = fmt(total);
+    summary.classList.remove('hidden');
+
+    list.querySelectorAll('.remove-cart-item').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await fetch(`${API}/eliminarProductoCarrito`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+          body: JSON.stringify({ id_usuario: state.user.id_usuario, id_inventario: parseInt(btn.dataset.inv) })
+        });
+        await loadCart();
+        renderCartPage();
+      });
+    });
+  }
+  showPage('cart');
+}
+
+//checkout y proceso de pago (simulado)
+function renderCheckout() {
+  const items = state.cart;
+  const total = items.reduce((s, i) => s + parseFloat(i.precio), 0);
+
+  $('checkout-list').innerHTML = items.map(item => {
+    const img = item.urlImagen || 'https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen';
+    return `<div class="checkout-item">
+      <img src="${img}" alt="${item.producto}" onerror="this.src='https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen'"/>
+      <div class="checkout-item-info">
+        <h5>${item.producto}</h5>
+        <div class="item-meta" style="font-size:0.75rem;color:var(--text-muted)">Talle: ${item.talle} · ${item.color}</div>
+        <div class="item-price">${fmt(item.precio)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  $('checkout-total').textContent = fmt(total);
+  $('do-pay').disabled = true;
+  $('pay-success').classList.add('hidden');
+  $('card-fields').classList.add('hidden');
+  $('pay-type').value = '';
+  showPage('checkout');
+}
+
+function checkPayReady() {
+  const type = $('pay-type').value;
+  if (!type) { $('do-pay').disabled = true; return; }
+  if (type === 'transferencia') { $('do-pay').disabled = false; return; }
+  const num = $('card-number').value.trim();
+  const exp = $('card-exp').value.trim();
+  const name = $('card-name').value.trim();
+  $('do-pay').disabled = !(num.length >= 19 && exp.length === 5 && name.length > 2);
+}
+
+//perfil de usuario
+async function loadProfile() {
+  if (!isLoggedIn()) { showPage('login'); return; }
+  try {
+    const res = await fetch(`${API}/obtenerDatosUsuario/${state.user.id_usuario}`, {
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      const u = data.payload[0];
+      $('p-nombre').value = u.nombre || '';
+      $('p-apellido').value = u.apellido || '';
+      $('p-direccion').value = u.direccion || '';
+      $('p-telefono').value = u.telefono || '';
+      $('p-email').value = u.email || '';
+      $('p-password').value = '';
+    }
+  } catch (e) {}
+  showPage('profile');
+}
+
+async function updateProfile() {
+  hideError('profile-error');
+  const body = {
+    nombre: $('p-nombre').value.trim(),
+    apellido: $('p-apellido').value.trim(),
+    direccion: $('p-direccion').value.trim(),
+    telefono: $('p-telefono').value.trim(),
+    email: $('p-email').value.trim(),
+    password: $('p-password').value || state.user.password || '',
+    rol: state.user.rol
+  };
+  try {
+    const res = await fetch(`${API}/modificarUsuario/${state.user.id_usuario}`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.codigo === 200) showSuccess('profile-success', 'Datos actualizados correctamente.');
+    else showError('profile-error', data.mensaje || 'Error al actualizar.');
+  } catch (e) { showError('profile-error', 'Error de conexión.'); }
+}
+
+//admin
+async function loadAdminCats() {
+  try {
+    const res = await fetch(`${API}/obtenerCategorias`, { headers: authHeaders() });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      const sel = $('a-cat');
+      sel.innerHTML = data.payload.map(c => `<option value="${c.id_categoria}">${c.nombre}</option>`).join('');
+    }
+  } catch (e) {}
+}
+
+let newProductId = null;
+
+async function addProduct() {
+  hideError('admin-error');
+  $('admin-success').classList.add('hidden');
+  const body = {
+    nombre: $('a-nombre').value.trim(),
+    descripcion: $('a-desc').value.trim(),
+    precio: parseFloat($('a-precio').value),
+    genero: $('a-genero').value,
+    id_categoria: parseInt($('a-cat').value),
+    imagen: $('a-imagen').value.trim()
+  };
+  if (!body.nombre || !body.precio || !body.id_categoria) return showError('admin-error', 'Completá todos los campos.');
+  try {
+    const res = await fetch(`${API}/cargarProducto`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      newProductId = data.payload[0].idProducto;
+      showSuccess('admin-success', `Producto cargado con ID ${newProductId}. Ahora podés agregar inventario.`);
+      $('inv-section').classList.remove('hidden');
+      $('inv-msg').textContent = `Agregando inventario al producto ID ${newProductId}`;
+      await loadProducts();
+    } else {
+      showError('admin-error', data.mensaje || 'Error al cargar producto.');
+    }
+  } catch (e) { showError('admin-error', 'Error de conexión.'); }
+}
+
+async function addInventario() {
+  if (!newProductId) return;
+  const body = {
+    talle: $('inv-talle').value.trim(),
+    color: $('inv-color').value.trim(),
+    stock: parseInt($('inv-stock').value),
+    id_producto: newProductId
+  };
+  if (!body.talle || !body.color || isNaN(body.stock)) return alert('Completá los campos de inventario.');
+  try {
+    const res = await fetch(`${API}/crearInventario`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.codigo === 200) {
+      $('inv-talle').value = '';
+      $('inv-color').value = '';
+      $('inv-stock').value = '';
+      alert('Inventario agregado. Podés agregar más talles/colores.');
+    }
+  } catch (e) { alert('Error al agregar inventario.'); }
+}
+
+function renderAdminSearch(products) {
+  const list = $('admin-products-list');
+  if (!products.length) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:0.9rem;">No se encontraron productos.</p>';
+    return;
+  }
+  list.innerHTML = products.map(p => {
+    const img = p.ulrImagen || 'https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen';
+    return `<div class="admin-product-row" data-id="${p.idProducto}">
+      <img src="${img}" alt="${p.producto}" onerror="this.src='https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen'"/>
+      <div class="admin-row-info">
+        <h4>${p.producto}</h4>
+        <p>${p.categoria} · ${p.genero} · ${fmt(p.precio)}</p>
+      </div>
+      <button class="btn-secondary edit-product-btn" data-id="${p.idProducto}">Modificar</button>
+    </div>
+    <div id="edit-form-${p.idProducto}" class="hidden"></div>`;
+  }).join('');
+
+  list.querySelectorAll('.edit-product-btn').forEach(btn => {
+    btn.addEventListener('click', () => openEditForm(parseInt(btn.dataset.id)));
+  });
+}
+
+async function openEditForm(id) {
+  const formDiv = $(`edit-form-${id}`);
+  if (!formDiv.classList.contains('hidden')) { formDiv.classList.add('hidden'); return; }
+  try {
+    const res = await fetch(`${API}/obtenerDatosProducto/${id}`);
+    const data = await res.json();
+    if (data.codigo !== 200) return;
+    const p = data.payload[0];
+    formDiv.classList.remove('hidden');
+    formDiv.innerHTML = `<div class="edit-form">
+      <div class="form-row">
+        <div class="form-group"><label>Nombre</label><input id="ep-nombre-${id}" value="${p.producto}"/></div>
+        <div class="form-group"><label>Precio</label><input type="number" id="ep-precio-${id}" value="${p.precio}"/></div>
+      </div>
+      <div class="form-group"><label>Descripción</label><textarea id="ep-desc-${id}" rows="2">${p.descripcion}</textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Género</label>
+          <select id="ep-genero-${id}">
+            <option value="masculino" ${p.genero==='masculino'?'selected':''}>Masculino</option>
+            <option value="femenino" ${p.genero==='femenino'?'selected':''}>Femenino</option>
+            <option value="unisex" ${p.genero==='unisex'?'selected':''}>Unisex</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Imagen URL</label><input id="ep-img-${id}" value="${p.ulrImagen}"/></div>
+      </div>
+      
+      <h4 style="margin:1rem 0 0.5rem;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-muted)">Inventario</h4>
+      <div id="inv-list-${id}">
+        ${data.payload.map(i => `<div class="form-row" style="align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+          <span style="font-size:0.85rem;color:var(--text-muted)">${i.talle} / ${i.color}</span>
+          <div class="form-group" style="margin:0;flex:0 0 100px">
+            <input type="number" id="inv-stock-edit-${i.idInventario}" value="${i.stock}" min="0" placeholder="Stock"/>
+          </div>
+          <button class="btn-secondary save-stock-btn" data-inv="${i.idInventario}" style="white-space:nowrap;font-size:0.75rem">Guardar stock</button>
+        </div>`).join('')}
+      </div>
+
+      <button class="btn-primary save-product-btn" data-id="${id}" style="margin-top:1rem">Guardar cambios</button>
+    </div>`;
+
+    //guardar stock por item de inventario
+    formDiv.querySelectorAll('.save-stock-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const invId = parseInt(btn.dataset.inv);
+        const stock = parseInt($(`inv-stock-edit-${invId}`).value);
+        try {
+          const r = await fetch(`${API}/modificarStock`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({ id_inventario: invId, stock })
+          });
+          const d = await r.json();
+          alert(d.mensaje || 'Stock actualizado.');
+        } catch (e) { alert('Error.'); }
+      });
+    });
+    //guardar cambios de producto
+    formDiv.querySelector('.save-product-btn').addEventListener('click', async () => {
+      alert('Para modificar datos del producto (nombre, precio, etc.) usá la funcionalidad de stock disponible o recargá un nuevo producto. El backend no expone endpoint de edición de producto base.');
+    });
+
+  } catch (e) { console.error(e); }
+}
+
+//inicio
+async function init() {
+  initTheme();
+  restoreSession();
+  updateHeader();
+
+    //cargar productos y renderizar home
+    $('products-grid').innerHTML = `<div class="spinner-wrap" style="grid-column:1/-1"><div class="spinner"></div></div>`;
+  await loadProducts();
+  renderProducts(state.products);
+
+  if (isLoggedIn()) {
+    await loadFavorites();
+    await loadCart();
+  }
+  //
+  //tema
+  $('theme-toggle').addEventListener('click', toggleTheme);
+
+  //navegacion entre categorias
+  $('cat-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    $('cat-menu').classList.toggle('open');
+  });
+  $('cat-menu').querySelector('[data-cat="all"]').addEventListener('click', e => {
+    e.preventDefault();
+    $('cat-menu').classList.remove('open');
+    renderProducts(state.products);
+    showPage('home');
+  });
+  document.addEventListener('click', () => $('cat-menu').classList.remove('open'));
+
+  //busqueda
+  $('search-btn').addEventListener('click', doSearch);
+  $('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+  //favoritos
+  $('fav-btn').addEventListener('click', renderFavoritesPage);
+
+  //carrito
+  $('cart-btn').addEventListener('click', async () => {
+    await loadCart();
+    renderCartPage();
+  });
+  $('go-checkout').addEventListener('click', renderCheckout);
+
+  //usuario
+  $('user-btn').addEventListener('click', loadProfile);
+
+  //login-registro
+  $('login-btn').addEventListener('click', () => {
+    if (!isLoggedIn()) showPage('login');
+    else logout();
+  });
+  $('do-login').addEventListener('click', doLogin);
+  $('do-register').addEventListener('click', doRegister);
+
+  //filtros
+  $('apply-filters').addEventListener('click', applyFilters);
+  $('clear-filters').addEventListener('click', clearFilters);
+
+  //perfiles
+  $('do-update-profile').addEventListener('click', updateProfile);
+
+  //checkout
+  $('pay-type').addEventListener('change', () => {
+    const type = $('pay-type').value;
+    if (type === 'debito' || type === 'credito') {
+      $('card-fields').classList.remove('hidden');
+    } else {
+      $('card-fields').classList.add('hidden');
+    }
+    checkPayReady();
+  });
+  ['card-number', 'card-exp', 'card-name'].forEach(id => {
+    $(id).addEventListener('input', checkPayReady);
+  });
+  //formateo de campos de tarjeta
+  $('card-number').addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 16);
+    e.target.value = v.replace(/(.{4})/g, '$1 ').trim();
+    checkPayReady();
+  });
+  $('card-exp').addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+    if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+    e.target.value = v;
+    checkPayReady();
+  });
+
+  $('do-pay').addEventListener('click', () => {
+    $('do-pay').disabled = true;
+    $('pay-success').classList.remove('hidden');
+    $('pay-success').textContent = '✓ ¡Pago aprobado con éxito! Gracias por tu compra.';
+  });
+//admin
+$('do-add-product').addEventListener('click', addProduct);
+  $('do-add-inv').addEventListener('click', addInventario);
+  $('admin-search-btn').addEventListener('click', () => {
+    const q = $('admin-search-input').value.trim().toLowerCase();
+    const filtered = q ? state.products.filter(p => p.producto?.toLowerCase().includes(q)) : state.products;
+    renderAdminSearch(filtered);
+  });
+  $('admin-search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('admin-search-btn').click();
+  });
+
+  //tab de admin
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      $(btn.dataset.tab).classList.add('active');
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
