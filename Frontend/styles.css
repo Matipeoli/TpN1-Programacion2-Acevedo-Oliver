@@ -587,3 +587,81 @@ footer {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--sand); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--brown); }
+
+
+/* ≤ 1024px — tablet paisaje */
+@media (max-width: 1024px) {
+  .product-detail-wrap { gap: 2rem; }
+  .checkout-wrap { gap: 1.5rem; }
+}
+
+/* ≤ 900px — tablet */
+@media (max-width: 900px) {
+  #main-header { padding: 0 1rem; grid-template-columns: auto 1fr auto; }
+  .search-wrap input { width: 120px; }
+  .product-detail-wrap { grid-template-columns: 1fr; max-width: 500px; }
+  .product-detail-img img { aspect-ratio: 4/3; }
+  .checkout-wrap { grid-template-columns: 1fr; }
+  .products-grid { padding: 1.5rem 1rem; gap: 1rem; }
+  .filters-bar { padding: 1rem; }
+  footer { padding: 2rem 1.5rem 0; }
+}
+
+/* ≤ 600px — móvil */
+@media (max-width: 600px) {
+  :root { --header-h: 56px; }
+
+  #main-header {
+    grid-template-columns: auto 1fr auto;
+    gap: .25rem;
+    padding: 0 .75rem;
+  }
+  .brand { font-size: 1.3rem; }
+  .search-wrap { display: none; }
+  .header-left { gap: .25rem; }
+  .header-right { gap: .1rem; }
+
+  #page-product,
+  #page-cart,
+  #page-checkout,
+  #page-admin { padding: 1rem; }
+  .page-header { padding: 1.5rem 1rem .75rem; }
+
+  .product-detail-wrap { gap: 1.2rem; }
+  .product-detail-info h2 { font-size: 1.6rem; }
+  .detail-price { font-size: 1.3rem; }
+
+  .form-card { padding: 1.5rem 1.2rem; }
+  .form-row { grid-template-columns: 1fr; gap: .75rem; }
+  .form-card h2 { font-size: 1.5rem; }
+
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: .75rem;
+    padding: 1rem .75rem;
+  }
+  .product-card-body h3 { font-size: .9rem; }
+  .price { font-size: .9rem; }
+
+  .cart-summary { flex-direction: column; align-items: stretch; text-align: center; gap: .75rem; }
+  .cart-summary .btn-primary { width: 100%; }
+  .cart-item img { width: 56px; height: 74px; }
+
+  .footer-inner { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+  .admin-tabs { overflow-x: auto; }
+  .tab-btn { white-space: nowrap; font-size: 13px; padding: .6rem .9rem; }
+
+  .filters-bar { flex-direction: column; align-items: stretch; gap: .6rem; }
+  .filter-group select,
+  .filter-group input[type="text"] { min-width: unset; width: 100%; }
+  .filters-bar .btn-secondary,
+  .filters-bar .btn-ghost { width: 100%; }
+}
+
+/* ≤ 380px — móvil pequeño */
+@media (max-width: 380px) {
+  .brand { font-size: 1.1rem; letter-spacing: .04em; }
+  .products-grid { grid-template-columns: 1fr 1fr; gap: .5rem; padding: .75rem .5rem; }
+  .footer-inner { grid-template-columns: 1fr; }
+}
