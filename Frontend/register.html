@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crear Cuenta — Lana & Lino</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header id="main-header">
+  <div class="header-left">
+    <button class="icon-btn" id="theme-toggle" title="Alternar modo">☽</button>
+  </div>
+  <div class="header-center">
+    <h1 class="brand" onclick="window.location.href='index.html'">Lana <span>&</span> Lino</h1>
+  </div>
+  <div class="header-right"></div>
+</header>
+
+<main id="app">
+  <section id="page-register" class="page active">
+    <div class="form-card">
+      <button class="modal-close" id="btn-back" onclick="window.location.href='index.html'" title="Volver">✕</button>
+      <h2>Crear Cuenta</h2>
+      <div id="reg-error" class="error-msg hidden"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre</label>
+          <input type="text" id="reg-nombre" placeholder="María" />
+        </div>
+        <div class="form-group">
+          <label>Apellido</label>
+          <input type="text" id="reg-apellido" placeholder="García" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Dirección</label>
+        <input type="text" id="reg-direccion" placeholder="Av. Siempreviva 742" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="text" id="reg-telefono" placeholder="+54 9 11 ..." />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="reg-email" placeholder="tu@email.com" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="reg-password" placeholder="••••••" />
+      </div>
+      <button class="btn-primary" id="do-register">Registrarme</button>
+      <p class="form-footer">¿Ya tenés cuenta? <a href="index.html#login">Iniciar sesión</a></p>
+    </div>
+  </section>
+</main>
+
+<script src="utils.js"></script>
+<script src="auth.js"></script>
+<script>
+  initTheme();
+  $('theme-toggle').addEventListener('click', toggleTheme);
+  $('do-register').addEventListener('click', doRegister);
+</script>
+</body>
+</html>

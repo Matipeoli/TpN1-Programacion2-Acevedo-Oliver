@@ -1,6 +1,6 @@
-const API = 'http://localhost:4000/api';
-
 //estado global de la aplicación
+const colorCache = {}; // { idProducto: ['negro', 'blanco', ...] }
+
 const state = {
   user: null,       // { id_usuario, nombre, apellido, rol, jwt }
   products: [],     // todos los productos del servidor
@@ -11,10 +11,6 @@ const state = {
   selectedInventario: null,
   filteredCat: null,
 };
-
-//funciones utilitarias 
-const $ = id => document.getElementById(id);
-const fmt = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n);
 
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -47,6 +43,9 @@ function authHeaders() {
 
 function isLoggedIn() { return !!state.user; }
 function isAdmin() { return state.user?.rol === 'admin'; }
+
+function openLoginModal()  { $('modal-login').classList.remove('hidden'); }
+function closeLoginModal() { $('modal-login').classList.add('hidden'); }
 
 //cambio de tema oscuro/claro
 function initTheme() {
@@ -89,82 +88,13 @@ function updateHeader() {
     }
   } else {
     loginBtn.textContent = 'Iniciar sesión';
-    loginBtn.onclick = () => showPage('login');
+    loginBtn.onclick = () => openLoginModal();
     favBtn.classList.add('hidden');
   }
 }
 
-//autentificacion y registro de usuarios, con sesiones y almacenamiento local
-async function doLogin() {
-  hideError('login-error');
-  const email = $('login-email').value.trim();
-  const password = $('login-password').value;
-  if (!email || !password) return showError('login-error', 'Completá todos los campos.');
-  try {
-    const res = await fetch(`${API}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (data.codigo !== 200) return showError('login-error', data.mensaje || 'Usuario o contraseña incorrecta.');
-    const u = data.payload[0];
-    state.user = { ...u, jwt: data.jwt };
-    localStorage.setItem('session', JSON.stringify(state.user));
-    updateHeader();
-    await loadFavorites();
-    await loadCart();
-    showPage('home');
-  } catch (e) {
-    showError('login-error', 'Error de conexión con el servidor.');
-  }
-}
-
-async function doRegister() {
-  hideError('reg-error');
-  const body = {
-    nombre: $('reg-nombre').value.trim(),
-    apellido: $('reg-apellido').value.trim(),
-    direccion: $('reg-direccion').value.trim(),
-    telefono: $('reg-telefono').value.trim(),
-    email: $('reg-email').value.trim(),
-    password: $('reg-password').value,
-    rol: 'usuario'
-  };
-  for (const [k, v] of Object.entries(body)) {
-    if (!v && k !== 'direccion' && k !== 'telefono') return showError('reg-error', 'Completá todos los campos obligatorios.');
-  }
-  try {
-    const res = await fetch(`${API}/registrarUsuario`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    if (data.codigo !== 200) return showError('reg-error', data.mensaje || 'Error al registrar.');
-    alert('¡Cuenta creada! Ya podés iniciar sesión.');
-    showPage('login');
-  } catch (e) {
-    showError('reg-error', 'Error de conexión con el servidor.');
-  }
-}
-
-function logout() {
-  state.user = null;
-  state.favorites = [];
-  state.cart = [];
-  localStorage.removeItem('session');
-  updateHeader();
-  updateCartBadge();
-  showPage('home');
-}
-
-function restoreSession() {
-  try {
-    const saved = localStorage.getItem('session');
-    if (saved) state.user = JSON.parse(saved);
-  } catch (_) {}
-}
+// login, registro y sesion → auth.js
+// perfil de usuario       → profile.js
 
 //funciones para cargar y mostrar productos, con filtros por categoria, genero y color  
 async function loadProducts() {
@@ -226,6 +156,7 @@ async function openProduct(id) {
     if (data.codigo !== 200 || !data.payload.length) return;
     state.currentProduct = { id, data: data.payload };
     state.selectedInventario = null;
+    colorCache[id] = [...new Set(data.payload.map(i => i.color).filter(Boolean))];
     renderProductDetail(data.payload);
     showPage('product');
   } catch (e) {
@@ -357,7 +288,7 @@ function renderProductDetail(items) {
   });
 
   $('add-to-cart-btn').addEventListener('click', () => {
-    if (!isLoggedIn()) return showPage('login');
+    if (!isLoggedIn()) return openLoginModal();
     addToCart();
   });
 }
@@ -412,9 +343,12 @@ function applyFilters() {
   let result = [...state.products];
   if (genero) result = result.filter(p => p.genero?.toLowerCase() === genero);
   if (cat) result = result.filter(p => p.idCategoria == cat);
-  // Color requires product detail — filter client side from what we have
-  // We'll do a best-effort filter; actual color is in inventory
-  if (color) result = result.filter(p => p.producto?.toLowerCase().includes(color));
+  if (color) {
+    const cached = Object.keys(colorCache);
+    if (cached.length > 0) {
+      result = result.filter(p => (colorCache[p.idProducto] || []).some(c => c.toLowerCase().includes(color)));
+    }
+  }
 
   renderProducts(result);
   showPage('home');
@@ -452,7 +386,7 @@ async function loadFavorites() {
 }
 
 async function toggleFavorite(productId, btn) {
-  if (!isLoggedIn()) return showPage('login');
+  if (!isLoggedIn()) return openLoginModal();
   const isFav = state.favorites.includes(productId);
   try {
     if (isFav) {
@@ -478,7 +412,7 @@ async function toggleFavorite(productId, btn) {
 }
 
 function renderFavoritesPage() {
-  if (!isLoggedIn()) { showPage('login'); return; }
+  if (!isLoggedIn()) { openLoginModal(); return; }
   const grid = $('favorites-grid');
   const favProducts = state.products.filter(p => state.favorites.includes(p.idProducto));
   if (!favProducts.length) {
@@ -563,7 +497,7 @@ async function addToCart() {
 }
 
 function renderCartPage() {
-  if (!isLoggedIn()) { showPage('login'); return; }
+  if (!isLoggedIn()) { openLoginModal(); return; }
   const list = $('cart-list');
   const summary = $('cart-summary');
 
@@ -640,49 +574,7 @@ function checkPayReady() {
   $('do-pay').disabled = !(num.length >= 19 && exp.length === 5 && name.length > 2);
 }
 
-//perfil de usuario
-async function loadProfile() {
-  if (!isLoggedIn()) { showPage('login'); return; }
-  try {
-    const res = await fetch(`${API}/obtenerDatosUsuario/${state.user.id_usuario}`, {
-      headers: authHeaders()
-    });
-    const data = await res.json();
-    if (data.codigo === 200) {
-      const u = data.payload[0];
-      $('p-nombre').value = u.nombre || '';
-      $('p-apellido').value = u.apellido || '';
-      $('p-direccion').value = u.direccion || '';
-      $('p-telefono').value = u.telefono || '';
-      $('p-email').value = u.email || '';
-      $('p-password').value = '';
-    }
-  } catch (e) {}
-  showPage('profile');
-}
-
-async function updateProfile() {
-  hideError('profile-error');
-  const body = {
-    nombre: $('p-nombre').value.trim(),
-    apellido: $('p-apellido').value.trim(),
-    direccion: $('p-direccion').value.trim(),
-    telefono: $('p-telefono').value.trim(),
-    email: $('p-email').value.trim(),
-    password: $('p-password').value || state.user.password || '',
-    rol: state.user.rol
-  };
-  try {
-    const res = await fetch(`${API}/modificarUsuario/${state.user.id_usuario}`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    if (data.codigo === 200) showSuccess('profile-success', 'Datos actualizados correctamente.');
-    else showError('profile-error', data.mensaje || 'Error al actualizar.');
-  } catch (e) { showError('profile-error', 'Error de conexión.'); }
-}
+// perfil de usuario → profile.js
 
 //admin
 async function loadAdminCats() {
@@ -889,22 +781,31 @@ async function init() {
   $('go-checkout').addEventListener('click', renderCheckout);
 
   //usuario
-  $('user-btn').addEventListener('click', loadProfile);
+  $('user-btn').addEventListener('click', () => { window.location.href = 'profile.html'; });
 
   //login-registro
   $('login-btn').addEventListener('click', () => {
-    if (!isLoggedIn()) showPage('login');
+    if (!isLoggedIn()) openLoginModal();
     else logout();
   });
   $('do-login').addEventListener('click', doLogin);
-  $('do-register').addEventListener('click', doRegister);
+
+  // cerrar modal al hacer click en X o fuera del card
+  $('modal-close-login').addEventListener('click', closeLoginModal);
+  $('modal-login').addEventListener('click', e => {
+    if (e.target === $('modal-login')) closeLoginModal();
+  });
+  // cerrar modal con Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLoginModal();
+  });
 
   //filtros
   $('apply-filters').addEventListener('click', applyFilters);
   $('clear-filters').addEventListener('click', clearFilters);
 
   //perfiles
-  $('do-update-profile').addEventListener('click', updateProfile);
+  // do-update-profile → profile.html
 
   //checkout
   $('pay-type').addEventListener('change', () => {

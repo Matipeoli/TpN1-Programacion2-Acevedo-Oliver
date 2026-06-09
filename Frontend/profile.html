@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mi Perfil — Lana & Lino</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header id="main-header">
+  <div class="header-left">
+    <button class="icon-btn" id="theme-toggle" title="Alternar modo">☽</button>
+  </div>
+  <div class="header-center">
+    <h1 class="brand" onclick="window.location.href='index.html'">Lana <span>&</span> Lino</h1>
+  </div>
+  <div class="header-right">
+    <button class="nav-link" id="login-btn"></button>
+  </div>
+</header>
+
+<main id="app">
+  <section id="page-profile" class="page active">
+    <div class="form-card">
+      <h2>Mis Datos</h2>
+      <div id="profile-error" class="error-msg hidden"></div>
+      <div id="profile-success" class="success-msg hidden"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre</label>
+          <input type="text" id="p-nombre"/>
+        </div>
+        <div class="form-group">
+          <label>Apellido</label>
+          <input type="text" id="p-apellido"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Dirección</label>
+        <input type="text" id="p-direccion"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="text" id="p-telefono"/>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="p-email"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="p-password" placeholder="Nueva contraseña (dejar vacío para mantener)"/>
+      </div>
+      <button class="btn-primary" id="do-update-profile">Guardar cambios</button>
+      <p class="form-footer"><a href="index.html">← Volver al inicio</a></p>
+    </div>
+  </section>
+</main>
+
+<script src="utils.js"></script>
+<script src="profile.js"></script>
+<script>
+  initTheme();
+  $('theme-toggle').addEventListener('click', toggleTheme);
+
+  // redirigir si no hay sesion
+  if (!isLoggedIn()) {
+    window.location.href = 'index.html';
+  } else {
+    loadProfile();
+    const loginBtn = $('login-btn');
+    loginBtn.textContent = 'Cerrar sesión';
+    loginBtn.addEventListener('click', () => {
+      localStorage.removeItem('session');
+      window.location.href = 'index.html';
+    });
+  }
+
+  $('do-update-profile').addEventListener('click', updateProfile);
+</script>
+</body>
+</html>
