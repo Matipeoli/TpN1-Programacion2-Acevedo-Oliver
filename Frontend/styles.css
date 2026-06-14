@@ -62,7 +62,7 @@ body {
 img { max-width: 100%; display: block; }
 a { color: var(--brown); text-decoration: none; }
 a:hover { text-decoration: underline; }
-button { font-family: inherit; cursor: pointer; border: none; background: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: var(--text); }
 input, select, textarea { font-family: inherit; font-size: 14px; outline: none; }
 
 h1, h2, h3, h4 {
@@ -324,6 +324,11 @@ h4 { font-size: 1.1rem; }
 .fav-card-btn .material-icons {
   font-size: 20px;
   color: inherit;
+}
+.btn-primary .material-icons {
+  font-size: 18px;
+  vertical-align: middle;
+  margin-right: .3rem;
 }
 
 .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }

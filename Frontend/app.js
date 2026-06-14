@@ -223,7 +223,7 @@ function renderProductDetail(items) {
         <div id="detail-stock-info" class="detail-stock">Seleccioná talle y color</div>
 
         <button class="btn-primary" id="add-to-cart-btn" disabled>
-          ${isLoggedIn() ? 'Agregar al carrito' : 'Iniciá sesión para comprar'}
+          ${isLoggedIn() ? '<span class="material-icons">shopping_cart</span> Agregar al carrito' : 'Iniciá sesión para comprar'}
         </button>
       </div>
     </div>`;
@@ -495,8 +495,8 @@ async function addToCart() {
     const data = await res.json();
     if (data.codigo === 200) {
       await loadCart();
-      $('add-to-cart-btn').textContent = '✓ Agregado al carrito';
-      setTimeout(() => { $('add-to-cart-btn').textContent = 'Agregar al carrito'; }, 2000);
+      $('add-to-cart-btn').innerHTML = '<span class="material-icons">check</span> Agregado al carrito';
+      setTimeout(() => { $('add-to-cart-btn').innerHTML = '<span class="material-icons">shopping_cart</span> Agregar al carrito'; }, 2000);
     }
   } catch (e) { console.error('Error agregando al carrito', e); }
 }
