@@ -222,7 +222,7 @@ function renderProductDetail(items) {
 
         <div id="detail-stock-info" class="detail-stock">Seleccioná talle y color</div>
 
-        <button class="btn-primary" id="add-to-cart-btn" disabled>
+        <button class="btn-primary" id="add-to-cart-btn">
           ${isLoggedIn() ? '<span class="material-icons">shopping_cart</span> Agregar al carrito' : 'Iniciá sesión para comprar'}
         </button>
       </div>
@@ -244,8 +244,10 @@ function renderProductDetail(items) {
 
   function updateSelection() {
     if (!selectedTalle || !selectedColor) {
-      $('detail-stock-info').textContent = 'Seleccioná talle y color';
-      $('add-to-cart-btn').disabled = true;
+      const stockEl = $('detail-stock-info');
+      stockEl.textContent = 'Seleccioná talle y color';
+      stockEl.className = 'detail-stock';
+      $('add-to-cart-btn').disabled = false;
       state.selectedInventario = null;
       return;
     }
@@ -290,6 +292,12 @@ function renderProductDetail(items) {
 
   $('add-to-cart-btn').addEventListener('click', () => {
     if (!isLoggedIn()) return openLoginModal();
+    if (!selectedTalle || !selectedColor) {
+      const stockEl = $('detail-stock-info');
+      stockEl.textContent = 'Este campo no puede estar vacío: seleccioná talle y color';
+      stockEl.className = 'detail-stock no-stock';
+      return;
+    }
     addToCart();
   });
 }
@@ -838,10 +846,17 @@ async function init() {
     checkPayReady();
   });
 
-  $('do-pay').addEventListener('click', () => {
+  $('do-pay').addEventListener('click', async () => {
     $('do-pay').disabled = true;
     $('pay-success').classList.remove('hidden');
     $('pay-success').textContent = '✓ ¡Pago aprobado con éxito! Gracias por tu compra.';
+
+    await Promise.all(state.cart.map(item => fetch(`${API}/eliminarProductoCarrito`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+      body: JSON.stringify({ id_usuario: state.user.id_usuario, id_inventario: item.idInventario })
+    })));
+    await loadCart();
   });
 //admin
 $('do-add-product').addEventListener('click', addProduct);
