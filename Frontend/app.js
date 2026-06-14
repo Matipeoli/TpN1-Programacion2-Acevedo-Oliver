@@ -61,7 +61,7 @@ function toggleTheme() {
   updateThemeIcon(next);
 }
 function updateThemeIcon(theme) {
-  $('theme-toggle').innerHTML = `<span class="material-symbols-outlined">${theme === 'light' ? 'dark_mode' : 'light_mode'}</span>`;
+  $('theme-toggle').innerHTML = `<span class="material-icons">${theme === 'light' ? 'dark_mode' : 'light_mode'}</span>`;
 }
 
 //actualiza el header dependiendo del estado de login y rol del usuario
@@ -124,7 +124,7 @@ function renderProducts(products) {
   // Attach events
   grid.querySelectorAll('.product-card').forEach(card => {
     card.addEventListener('click', e => {
-      if (e.target.closest('.fav-card-btn') || e.target.closest('.add-cart-card-btn')) return;
+      if (e.target.closest('.fav-card-btn')) return;
       openProduct(card.dataset.id);
     });
   });
@@ -134,13 +134,6 @@ function renderProducts(products) {
       toggleFavorite(parseInt(btn.dataset.id), btn);
     });
   });
-  grid.querySelectorAll('.add-cart-card-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      if (!isLoggedIn()) return openLoginModal();
-      openProduct(btn.dataset.id);
-    });
-  });
 }
 
 function productCard(p) {
@@ -148,14 +141,11 @@ function productCard(p) {
   const img = p.ulrImagen || p.urlImagen || 'https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen';
   return `<div class="product-card" data-id="${p.idProducto}">
     <img src="${img}" alt="${p.producto}" onerror="this.src='https://placehold.co/400x533/f5f0eb/8b5e3c?text=Sin+imagen'"/>
-    ${isLoggedIn() ? `<button class="fav-card-btn ${isFav ? 'active' : ''}" data-id="${p.idProducto}" title="Favoritos"><span class="material-symbols-outlined">${isFav ? 'favorite' : 'favorite_border'}</span></button>` : ''}
+    ${isLoggedIn() ? `<button class="fav-card-btn ${isFav ? 'active' : ''}" data-id="${p.idProducto}" title="Favoritos"><span class="material-icons">${isFav ? 'favorite' : 'favorite_border'}</span></button>` : ''}
     <div class="product-card-body">
       <div class="cat-tag">${p.categoria || ''}</div>
       <h3>${p.producto}</h3>
-      <div class="price-row">
-        <div class="price">${fmt(p.precio)}</div>
-        <button class="add-cart-card-btn" data-id="${p.idProducto}" title="Agregar al carrito"><span class="material-symbols-outlined">add_shopping_cart</span></button>
-      </div>
+      <div class="price">${fmt(p.precio)}</div>
     </div>
   </div>`;
 }
@@ -409,7 +399,7 @@ async function toggleFavorite(productId, btn) {
         body: JSON.stringify({ id_usuario: state.user.id_usuario, id_producto: productId })
       });
       state.favorites = state.favorites.filter(id => id !== productId);
-      btn.innerHTML = '<span class="material-symbols-outlined">favorite_border</span>';
+      btn.innerHTML = '<span class="material-icons">favorite_border</span>';
       btn.classList.remove('active');
     } else {
       await fetch(`${API}/agregarFavorito`, {
@@ -418,7 +408,7 @@ async function toggleFavorite(productId, btn) {
         body: JSON.stringify({ id_usuario: state.user.id_usuario, id_producto: productId })
       });
       state.favorites.push(productId);
-      btn.innerHTML = '<span class="material-symbols-outlined">favorite</span>';
+      btn.innerHTML = '<span class="material-icons">favorite</span>';
       btn.classList.add('active');
     }
   } catch (e) { console.error('Error toggling favorite', e); }
@@ -790,11 +780,6 @@ async function init() {
 
   //carrito
   $('cart-btn').addEventListener('click', async () => {
-    await loadCart();
-    renderCartPage();
-  });
-  $('filters-cart-btn').addEventListener('click', async () => {
-    if (!isLoggedIn()) return openLoginModal();
     await loadCart();
     renderCartPage();
   });

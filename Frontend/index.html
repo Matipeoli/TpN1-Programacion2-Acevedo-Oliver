@@ -6,7 +6,7 @@
   <title>Lana & Lino</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,fill@24,400,0" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -14,7 +14,7 @@
 <!-- header -->
 <header id="main-header">
   <div class="header-left">
-    <button class="icon-btn" id="theme-toggle" title="Alternar modo"><span class="material-symbols-outlined">dark_mode</span></button>
+    <button class="icon-btn" id="theme-toggle" title="Alternar modo"><span class="material-icons">dark_mode</span></button>
     <div class="dropdown" id="cat-dropdown">
       <button class="nav-link" id="cat-btn">Productos ▾</button>
       <div class="dropdown-menu" id="cat-menu">
@@ -32,9 +32,9 @@
       <input type="text" id="search-input" placeholder="Buscar producto..." />
       <button id="search-btn" class="icon-btn">⌕</button>
     </div>
-    <button class="icon-btn" id="fav-btn" title="Favoritos"><span class="material-symbols-outlined">favorite_border</span></button>
+    <button class="icon-btn" id="fav-btn" title="Favoritos"><span class="material-icons">favorite_border</span></button>
     <button class="icon-btn" id="cart-btn" title="Carrito">
-      <span class="material-symbols-outlined">shopping_cart</span> <span id="cart-count" class="badge hidden">0</span>
+      <span class="material-icons">shopping_cart</span> <span id="cart-count" class="badge hidden">0</span>
     </button>
     <button class="icon-btn" id="user-btn" title="Mi cuenta">👤</button>
     <button class="nav-link" id="login-btn">Iniciar sesión</button>
@@ -68,7 +68,6 @@
       </div>
       <button class="btn-secondary" id="apply-filters">Filtrar</button>
       <button class="btn-ghost" id="clear-filters">Limpiar</button>
-      <button class="icon-btn filters-cart-btn" id="filters-cart-btn" title="Ir al carrito"><span class="material-symbols-outlined">shopping_cart</span></button>
     </div>
     <div id="products-grid" class="products-grid"></div>
   </section>
