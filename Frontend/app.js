@@ -101,6 +101,7 @@ async function loadProducts() {
   try {
     const res = await fetch(`${API}/obtenerProductos`);
     const data = await res.json();
+    console.log('Productos cargados:', data);
     if (data.codigo === 200) {
       state.products = data.payload;
       buildCategoryDropdown();
@@ -295,9 +296,11 @@ function renderProductDetail(items) {
 
 //categorias
 function buildCategoryDropdown() {
-  const cats = [...new Set(state.products.map(p => ({ id: p.idCategoria, name: p.categoria })))
-    .reduce((m, c) => { m.set(c.id, c); return m; }, new Map()).values()];
-  state.categories = cats;
+  const map = new Map();
+  state.products.forEach(p => {
+    if (!map.has(p.idCategoria)) map.set(p.idCategoria, { id: p.idCategoria, name: p.categoria });
+  });
+  const cats = [...map.values()];
 
   const menu = $('cat-menu');
   menu.innerHTML = `<a href="#" class="dropdown-item" data-cat="all">Todos los productos</a>`;
@@ -461,7 +464,9 @@ async function loadCart() {
     const res = await fetch(`${API}/obtenerProductosCarrito/${state.user.id_usuario}`, {
       headers: authHeaders()
     });
-    const data = await res.json();
+    const text = await res.text();
+let data;
+try { data = JSON.parse(text); } catch { console.error('Respuesta no válida del servidor:', text); return; }
     if (data.codigo === 200) {
       state.cart = data.payload;
       updateCartBadge();
