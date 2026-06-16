@@ -21,8 +21,12 @@ async function loadProfile() {
       $('p-telefono').value = u.telefono || '';
       $('p-email').value = u.email || '';
       $('p-password').value = '';
+    } else {
+      showError('profile-error', data.mensaje || 'No se pudieron cargar los datos del perfil.');
     }
-  } catch (e) {}
+  } catch (e) {
+    showError('profile-error', 'Error de conexiÃ³n al cargar el perfil.');
+  }
 }
 
 async function updateProfile() {
